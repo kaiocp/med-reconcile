@@ -35,6 +35,42 @@ Engineering decisions log per Part 3 of the assessment. Each entry follows the f
 
 ---
 
+## Structured LLM outputs over free text
+
+**Decision:** The LLM returns a JSON-schema-constrained response (`clinical_summary`, `medications_referenced`, `disclaimer`) rather than free text. **Alternatives considered:** free-text response parsed downstream with regex; unstructured prose with no schema constraint. **Why:** both OpenAI and Anthropic support schema-based structured outputs, making the pattern portable across providers; the `medications_referenced` field is the hook the deterministic validation layer uses to detect hallucinated medication names without NLP extraction from prose — free text was rejected because it shifts parsing complexity downstream and creates fragile regex dependencies. **Revisit:** if the schema needs additional validation fields (e.g., a `severity_claims` list for the severity-mismatch validator), add them here and update the validation layer concurrently.
+
+---
+
+## No LLM tool/function calling
+
+**Decision:** Drug interaction checks, FHIR data fetching, and allergy reads are deterministic operations orchestrated by the service layer — they are not exposed as LLM tool calls. **Alternatives considered:** tool/function calling pattern where the LLM decides when to fetch data or check interactions. **Why:** making a clinical safety check a probabilistic decision (the LLM decides whether to check for interactions) is incompatible with the pipeline's deterministic-first architecture; the LLM receives pre-assembled, validated data and produces explanatory text — it never orchestrates. **Revisit:** no planned revision; this constraint is architectural, not a scope limitation.
+
+---
+
+## Temperature fixed at 0 for all clinical summary generation
+
+**Decision:** Temperature is fixed at 0 for all LLM calls regardless of provider, model, or task variant. **Alternatives considered:** task-specific temperature tuning; provider-default temperature. **Why:** this is a patient safety decision — research shows significant diagnostic accuracy drops at higher temperature settings, and temperature 0 universally represents maximum determinism across providers (OpenAI's scale is 0–2, Anthropic's is 0–1). **Revisit:** if a future clinical NLP task genuinely requires variability (e.g., drafting alternative phrasings for patient-facing copy), introduce it as a separate, explicitly parameterised call — never change this constant.
+
+---
+
+## Model agnosticism via configuration parameter
+
+**Decision:** The LLM provider is abstracted behind a `MODEL_IDENTIFIER` constant; switching models is a configuration change, not a code change. **Alternatives considered:** hardcoding `gpt-4o` as the model string; accepting the model as a function parameter per call. **Why:** peer-reviewed medical LLM benchmarks evolve rapidly — current literature validates GPT-4/GPT-4o but no GPT-5 clinical studies exist as of April 2026, and the cost landscape shifts with each model release; locking the service to a specific version creates technical debt the moment a new benchmark makes a different model preferable. **Revisit:** when a new model is validated for clinical summarisation, update `MODEL_IDENTIFIER` and add a DECISIONS.md entry noting the benchmark evidence.
+
+---
+
+## Prompt strategy: system/user split with SHA-256 hashing
+
+**Decision:** The system prompt is a stable, module-level constant hashed with SHA-256 at import time (`SYSTEM_PROMPT_HASH`); the per-request user prompt is assembled via LangChain's `ChatPromptTemplate` with hard negative constraints embedded in the system prompt. **Alternatives considered:** plain f-string assembly per call; single-message prompt without a system/user split. **Why:** the hard constraints (never override severity, never recommend dosage changes, never reference medications not in the data) keep the LLM in the informing lane for FDA CDS Non-Device classification; the closed medication set in the user prompt reduces hallucination risk per published benchmarks; the stable hash is designed to satisfy 21 CFR Part 11 audit trail traceability — when the audit layer is built, attaching `SYSTEM_PROMPT_HASH` to each reconciliation record will allow every result to be traced back to the exact prompt version that produced it. **Revisit:** wire `SYSTEM_PROMPT_HASH` into the reconciliation record when the audit layer lands; if the system prompt changes before then, the hash changes automatically — document the clinical rationale for the change in this file.
+
+---
+
+## No auto-rewrite loop for failed LLM validation
+
+**Decision:** If the LLM output fails validation, the response surfaces the validation flags and holds the summary for physician review — there is no corrective retry loop that attempts to rewrite the summary. **Alternatives considered:** retry-with-feedback loop where a validation failure triggers a second LLM call with corrective instructions. **Why:** temperature 0 means naive retries produce identical output; corrective retries add latency and cost for a fix the physician would make in seconds during mandatory review; a silently "fixed" summary that passes validation creates more risk than a flagged one because it removes the signal that something was off. **Revisit:** if production data shows a specific, correctable failure mode (e.g., disclaimer consistently dropped by a specific model version), a targeted single-retry is preferable to a general loop — but only after physician-review evidence confirms the corrective prompt reliably fixes it.
+
+---
+
 ## Typed adapter contracts at the boundary
 
 **Decision:** All three adapters return Pydantic models (`InteractionRecord`, `AllergyRecord`) or `Literal`-typed strings (`PregnancyStatus`, `AllergyDataStatus`) instead of raw `dict[str, Any]`; `get_pregnancy_status` validates the source value against the closed Literal set and raises `ValueError` on anything else. **Alternatives considered:** raw dicts (no compile-time safety); TypedDict (no runtime validation); cast without validation. **Why:** the adapter is the typing boundary — drift between the mock and the production API will land here, and Pydantic's runtime validation surfaces it loud, while `Literal` aliases give the service layer compile-time coverage on every branch (most importantly the contraindication overlay's pregnancy check). The trade-off is a small per-call instantiation cost, negligible compared to the network IO that production adapters will dominate. **Revisit:** when a real HTTP client replaces the mock, adapter bodies become `Model.model_validate(response.json())` — same model, different source, no service-layer change.

@@ -17,3 +17,13 @@ class AllergyConflict(BaseModel):
     drug_name: str  # The new prescription drug that conflicts
     allergen: str  # The documented allergen it conflicts with
     conflict_type: Literal["direct", "cross_reactivity"]
+
+
+class ProcessedInteraction(BaseModel):
+    """A drug-drug interaction after severity mapping and pregnancy overlay have been applied."""
+
+    medication_a: str
+    medication_b: str
+    severity: str  # ClinicalSeverity value — kept as str to avoid models → services import
+    source_severity: str
+    description: str
