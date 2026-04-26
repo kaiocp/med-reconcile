@@ -310,6 +310,45 @@ standard = ["email-validator (>=2.0.0)", "fastapi-cli[standard] (>=0.0.8)", "fas
 standard-no-fastapi-cloud-cli = ["email-validator (>=2.0.0)", "fastapi-cli[standard-no-fastapi-cloud-cli] (>=0.0.8)", "httpx (>=0.23.0,<1.0.0)", "jinja2 (>=3.1.5)", "pydantic-extra-types (>=2.0.0)", "pydantic-settings (>=2.0.0)", "python-multipart (>=0.0.18)", "uvicorn[standard] (>=0.12.0)"]
 
 [[package]]
+name = "fhir-core"
+version = "1.1.7"
+description = "FHIR Core library"
+optional = false
+python-versions = ">=3.8"
+files = [
+    {file = "fhir_core-1.1.7-py2.py3-none-any.whl", hash = "sha256:7419c5102afd180392114a810707c55401fa96408d16d95df9f037def7ded52c"},
+    {file = "fhir_core-1.1.7.tar.gz", hash = "sha256:5c77aa939bb1c2920f505cda0e4905b38bba1e87ad46351acc383cec7184c4d7"},
+]
+
+[package.dependencies]
+pydantic = ">=2.7.4,<3.0"
+
+[package.extras]
+dev = ["Jinja2 (==2.11.1)", "MarkupSafe (==1.1.1)", "PyYAML (>=6.0.1)", "black (>=23.0,<24.0)", "certifi", "colorlog (==2.10.0)", "coverage", "fhirspec", "flake8 (==6.0)", "flake8-bugbear (>=22.12.6)", "flake8-isort (>=6.0.0)", "importlib-metadata (>=5.2.0)", "isort (>=5.11.4)", "lxml", "mypy", "pytest (>5.4.0)", "pytest-cov (>=2.10.0)", "requests (==2.23.0)", "setuptools (==65.6.3)", "types-PyYAML", "types-requests", "types-simplejson", "zest-releaser[recommended]"]
+test = ["PyYAML (>=6.0.1)", "black (>=23.0,<24.0)", "coverage", "flake8 (==6.0)", "flake8-bugbear (>=22.12.6)", "flake8-isort (>=6.0.0)", "importlib-metadata (>=5.2.0)", "isort (>=5.11.4)", "lxml", "mypy", "pytest (>5.4.0)", "pytest-cov (>=2.10.0)", "pytest-runner", "requests (==2.23.0)", "setuptools (==65.6.3)", "types-PyYAML", "types-requests", "types-simplejson"]
+
+[[package]]
+name = "fhir-resources"
+version = "8.2.0"
+description = "FHIR Resources as Model Class"
+optional = false
+python-versions = ">=3.8"
+files = [
+    {file = "fhir_resources-8.2.0-py2.py3-none-any.whl", hash = "sha256:ce6c9edc2aca867a090415885f1b0c625c510feddc0d843dc54a31d8b32ac091"},
+    {file = "fhir_resources-8.2.0.tar.gz", hash = "sha256:122a8b336385d504b399df9c5f332a7d913f07bc71a52dc9dde39abb5bf29129"},
+]
+
+[package.dependencies]
+fhir-core = ">=1.1.5"
+
+[package.extras]
+all = ["PyYAML (>=5.4.1)", "lxml"]
+dev = ["Jinja2 (==3.1.6)", "MarkupSafe (==2.1.5)", "black (>=23.0,<24.0)", "certifi", "colorlog (==2.10.0)", "coverage", "fhirspec (>=0.6.0)", "flake8 (==7.3.0)", "flake8-bugbear (>=22.12.6)", "flake8-isort (>=6.0.0)", "importlib-metadata (>=5.2.0)", "isort (>=5.11.4)", "mypy", "pytest (>5.4.0)", "pytest-cov (>=2.10.0)", "requests (==2.32.4)", "setuptools (==65.6.3)", "twine (==6.1.0)", "types-PyYAML", "types-requests", "types-simplejson", "zest-releaser[recommended]"]
+test = ["PyYAML (>=5.4.1)", "black (>=23.0,<24.0)", "coverage", "flake8 (==7.3.0)", "flake8-bugbear (>=22.12.6)", "flake8-isort (>=6.0.0)", "importlib-metadata (>=5.2.0)", "isort (>=5.11.4)", "lxml", "mypy", "pytest (>5.4.0)", "pytest-cov (>=2.10.0)", "pytest-runner", "requests (==2.32.4)", "setuptools (==65.6.3)", "types-PyYAML", "types-requests", "types-simplejson"]
+xml = ["lxml"]
+yaml = ["PyYAML (>=5.4.1)"]
+
+[[package]]
 name = "filelock"
 version = "3.29.0"
 description = "A platform independent file lock."
@@ -1938,4 +1977,4 @@ files = [
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.11"
-content-hash = "59278d3687aeaf9e5f486a2cf2490dc9b42e5c3142f9194864335fc78ca46874"
+content-hash = "d73853f7278c3aaa7a892cbd4d8d05c8d60859111e48f4d122b7597c0c6509d6"

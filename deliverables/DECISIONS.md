@@ -26,3 +26,27 @@ Engineering decisions log per Part 3 of the assessment. Each entry follows the f
 ## Architecture: layered with adapters
 
 **Decision:** Three-layer architecture with one-way dependencies (`api/` → `services/` → `adapters/`), where each external dependency — FHIR, drug interactions, allergy source, LLM — lives behind a concrete adapter module exposing a stable function signature; `services/` contains the pipeline orchestration and pure functions for severity mapping and validation. **Alternatives considered:** MVC (Model-View-Controller); full hexagonal architecture with abstract Port interfaces and dependency injection. **Why:** MVC's separation doesn't fit a pure API service (there's no presentation layer, just Pydantic JSON serialization, and Controller would conflate routing with pipeline orchestration that benefits from being split), and full hexagonal would add an abstract base class per adapter when each has a single concrete implementation — boilerplate without benefit at this scope. Layered + adapters delivers the same practical swappability (mock → real API is a module-level rewrite, not architectural) with less indirection, and formalizing Port interfaces remains a clean upgrade path if the service later supports multiple FHIR vendors or LLM providers simultaneously. **Revisit:** introduce explicit Port interfaces (ABCs) the first time the service genuinely needs two implementations of the same adapter (e.g., A/B testing LLM providers, multi-EHR support).
+
+---
+
+## Typed adapter contracts at the boundary
+
+**Decision:** All three adapters return Pydantic models (`InteractionRecord`, `AllergyRecord`) or `Literal`-typed strings (`PregnancyStatus`, `AllergyDataStatus`) instead of raw `dict[str, Any]`; `get_pregnancy_status` validates the source value against the closed Literal set and raises `ValueError` on anything else. **Alternatives considered:** raw dicts (no compile-time safety); TypedDict (no runtime validation); cast without validation. **Why:** the adapter is the typing boundary — drift between the mock and the production API will land here, and Pydantic's runtime validation surfaces it loud, while `Literal` aliases give the service layer compile-time coverage on every branch (most importantly the contraindication overlay's pregnancy check). The trade-off is a small per-call instantiation cost, negligible compared to the network IO that production adapters will dominate. **Revisit:** when a real HTTP client replaces the mock, adapter bodies become `Model.model_validate(response.json())` — same model, different source, no service-layer change.
+
+---
+
+## Allergy adapter degraded path with broad except
+
+**Decision:** `get_patient_allergies_safe` wraps the underlying CSV read in a broad `except Exception`, returning `([], "unavailable")` on any failure rather than propagating; the choice is verified by a `pytest.mark.parametrize` covering `OSError`, `ValueError`, and `KeyError`. **Alternatives considered:** catch specific exceptions only; let exceptions propagate and fail the whole reconciliation; one narrow negative test rather than parametrized. **Why:** the CTO's nightly-CSV-export setup makes malformed input realistic, and a clinical reconciliation must never crash because of a degraded auxiliary data source — the trade-off is opacity (we lose the specific exception type at the boundary), which the negative tests offset by pinning that the catch handles each realistic failure class. **Revisit:** if production logs surface a recurring specific exception, narrow the catch to that class so unexpected ones still surface, and add a parametrized case for it.
+
+---
+
+## Mocks bundled into the runtime Docker image
+
+**Decision:** The Dockerfile copies both `app/` and `mocks/` into the runtime image so the assessment-scope adapters resolve at container boot. **Alternatives considered:** keep mocks out of the image and have adapters stub empty data; build two image variants (mock vs. production) gated by a build arg; switch adapters' import targets via environment variable at startup. **Why:** the assessment scope explicitly mocks every external API, so the deployable artifact for this engagement *is* the mock-backed service — splitting images or adding env-conditional import logic creates machinery that has to be torn out the moment a real adapter lands, and the eventual production rollout is a small, self-documenting Dockerfile change (drop `COPY mocks`, swap each adapter's internals). **Revisit:** when the first real adapter lands, make the `COPY mocks` line conditional on a build arg so the same Dockerfile produces both variants without duplication.
+
+---
+
+## mypy `ignore_missing_imports` for the `fhir.*` namespace
+
+**Decision:** Added a mypy override to ignore missing type stubs for `fhir.resources.*` and `fhir.*`, accepting the third-party library's untyped surface rather than wrapping every FHIR construction in `cast()`. **Alternatives considered:** add explicit `cast()` calls at every FHIR boundary; pin to a `fhir.resources` version that ships complete stubs (none currently do); use `# type: ignore[import-not-found]` on each import line. **Why:** strict mypy on our own code is the goal — paying typing-noise across third-party FHIR boundaries we don't own buys nothing in safety, and the function-level signatures in `fhir_client.py` already pin the contract the service layer cares about. **Revisit:** if `fhir.resources` ships complete stubs in a future minor release, drop the override and let mypy infer end-to-end.

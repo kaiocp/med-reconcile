@@ -3,13 +3,14 @@ name = "med-reconcile"
 version = "0.1.0"
 description = "Medication reconciliation service: FHIR-sourced patient context + drug interaction checks + LLM-generated clinical summary with deterministic verification."
 authors = ["Kaio Pedreira <80350711+kaiocp@users.noreply.github.com>"]
-packages = [{ include = "app" }]
+packages = [{ include = "app" }, { include = "mocks" }]
 
 [tool.poetry.dependencies]
 python = "^3.11"
 fastapi = "^0.136.1"
 uvicorn = { extras = ["standard"], version = "^0.32.0" }
 pydantic = "^2.9.0"
+fhir-resources = "^8.0"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^9.0"
@@ -74,6 +75,12 @@ exclude = ["deliverables", "research", "reviewers"]
 module = "tests.*"
 disallow_untyped_defs = false
 disallow_incomplete_defs = false
+
+# fhir.resources ships without complete type stubs — accept third-party
+# untyped surface rather than wrap every call in casts.
+[[tool.mypy.overrides]]
+module = ["fhir.resources.*", "fhir.*"]
+ignore_missing_imports = true
 
 # ---------------------------------------------------------------------------
 # pytest configuration.

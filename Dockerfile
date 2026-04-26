@@ -32,6 +32,7 @@ USER appuser
 WORKDIR /home/appuser/app
 
 COPY --chown=appuser:appuser app ./app
+COPY --chown=appuser:appuser mocks ./mocks
 
 EXPOSE 8000
 
