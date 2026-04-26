@@ -92,3 +92,21 @@ Engineering decisions log per Part 3 of the assessment. Each entry follows the f
 ## mypy `ignore_missing_imports` for the `fhir.*` namespace
 
 **Decision:** Added a mypy override to ignore missing type stubs for `fhir.resources.*` and `fhir.*`, accepting the third-party library's untyped surface rather than wrapping every FHIR construction in `cast()`. **Alternatives considered:** add explicit `cast()` calls at every FHIR boundary; pin to a `fhir.resources` version that ships complete stubs (none currently do); use `# type: ignore[import-not-found]` on each import line. **Why:** strict mypy on our own code is the goal — paying typing-noise across third-party FHIR boundaries we don't own buys nothing in safety, and the function-level signatures in `fhir_client.py` already pin the contract the service layer cares about. **Revisit:** if `fhir.resources` ships complete stubs in a future minor release, drop the override and let mypy infer end-to-end.
+
+---
+
+## LLM output validation uses deterministic string matching only
+
+**Decision:** The validation layer (`summary_validator.py`) uses exact case-insensitive string matching and a static alias table — no LLM involvement, no probabilistic methods. **Alternatives considered:** a second LLM call to verify the first (a "judge" model pattern); fuzzy string matching (rapidfuzz, token_set_ratio with a 90% threshold). **Why:** a probabilistic validator could itself hallucinate, producing false negatives on exactly the checks that matter most; a false negative on a validation check (missing a hallucinated medication name) creates worse outcomes than no check at all, because it gives a false signal of cleanliness to the reviewing physician. The judge-model pattern adds latency, cost, and a second point of non-determinism. **Revisit:** if production logs show exact matching producing false positives on legitimate medication name variants, add fuzzy matching as a third lookup tier — but only with a labelled dataset of real outputs to tune the threshold against.
+
+---
+
+## Medication matching uses exact plus normalized alias matching; fuzzy matching deferred
+
+**Decision:** The unrecognized-medication validator performs two lookups in sequence: (1) exact case-insensitive match against known names, (2) alias-table match resolving common brand names to generics. Both failing constitutes an unrecognized reference. **Alternatives considered:** fuzzy matching (rapidfuzz `token_set_ratio`, 90% threshold) as a third tier. **Why:** the mock LLM returns exact medication names drawn from the structured prompt data, so fuzzy matching would never trigger in the current test environment — adding it without observable test coverage would be dead, unexercised code. The alias table covers the clinically meaningful brand-to-generic mappings (Coumadin→warfarin, Tylenol→acetaminophen) that do occur in real LLM outputs. **Revisit:** when the real LLM adapter lands, instrument `medications_referenced` values against known names in production logs; if misspellings or partial names appear with non-trivial frequency, introduce fuzzy matching as a third tier with a labelled threshold.
+
+---
+
+## Disclaimer presence check added after empirical failure in temperature-0 testing
+
+**Decision:** A dedicated `missing_disclaimer` validator checks for the phrase "pending physician review" in every generated summary, treating its absence as a critical flag regardless of other validation results. **Alternatives considered:** rely on the system prompt constraint alone (the prompt already mandates the disclaimer); add a retry if the disclaimer is absent. **Why:** during internal testing, GPT-4o-mini dropped the mandatory "pending physician review" disclaimer in 1 of 7 test scenarios at temperature 0 — prompt constraints are the first line of defense, but deterministic validation is the backstop; a summary reaching a prescriber without the disclaimer would remove the human-review gate entirely. Retry was rejected for the same reasons as the general no-auto-rewrite-loop decision (temperature 0 produces identical output on naive retry). **Revisit:** track disclaimer-absence rate in production; if it drops to zero across 1,000+ real calls, the check can be downgraded from critical to warning without removing it.

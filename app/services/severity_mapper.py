@@ -6,26 +6,9 @@ mapping table. The LLM explains severity in plain language; it does not decide
 what the severity level is.
 """
 
-from enum import StrEnum
+from app.models.severity import ClinicalSeverity, DrugBankSeverity
 
-
-class ClinicalSeverity(StrEnum):
-    """Clinical severity levels used throughout the reconciliation workflow."""
-
-    NONE = "none"
-    LOW = "low"
-    MODERATE = "moderate"
-    HIGH = "high"
-    CONTRAINDICATED = "contraindicated"
-
-
-class DrugBankSeverity(StrEnum):
-    """DrugBank-native severity levels as returned by the interaction API."""
-
-    MINOR = "minor"
-    MODERATE = "moderate"
-    MAJOR = "major"
-
+__all__ = ["ClinicalSeverity", "DrugBankSeverity", "map_severity"]
 
 _SEVERITY_MAP: dict[str, ClinicalSeverity] = {
     "minor": ClinicalSeverity.LOW,

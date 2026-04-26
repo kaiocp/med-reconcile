@@ -1,5 +1,7 @@
 """Unit tests for the LLM clinical summary adapter."""
 
+from typing import Literal
+
 import pytest
 
 from app.adapters.llm_client import (
@@ -10,6 +12,7 @@ from app.adapters.llm_client import (
 from app.models.llm_output import LLMOutputSchema
 from app.models.patient_context import MedicationItem, PrescriptionItem
 from app.models.response import AllergyConflict, ProcessedInteraction
+from app.models.severity import ClinicalSeverity
 
 _NEW_RX = PrescriptionItem(
     drug_name="Warfarin",
@@ -27,22 +30,24 @@ _INTERACTIONS = [
     ProcessedInteraction(
         medication_a="Warfarin",
         medication_b="Sertraline",
-        severity="high",
+        severity=ClinicalSeverity.HIGH,
         source_severity="major",
         description="SSRI increases warfarin plasma levels via CYP2C9 inhibition.",
     )
 ]
 
 _ALLERGY_CONFLICTS = [
-    AllergyConflict(drug_name="Amoxicillin", allergen="Penicillin", conflict_type="cross_reactivity")
+    AllergyConflict(
+        drug_name="Amoxicillin", allergen="Penicillin", conflict_type="cross_reactivity"
+    )
 ]
 
 
 def _call(
     interactions: list[ProcessedInteraction] | None = None,
     allergy_conflicts: list[AllergyConflict] | None = None,
-    allergy_data_status: str = "available",
-    pregnancy_status: str = "not_pregnant",
+    allergy_data_status: Literal["available", "unavailable"] = "available",
+    pregnancy_status: Literal["active_pregnancy", "not_pregnant", "postpartum"] = "not_pregnant",
 ) -> LLMOutputSchema | None:
     return generate_clinical_summary(
         patient_id="patient-003",
@@ -127,7 +132,7 @@ def test_contraindicated_uses_teratogenic_language_not_prescriptive() -> None:
         ProcessedInteraction(
             medication_a="Warfarin",
             medication_b="Enoxaparin",
-            severity="contraindicated",
+            severity=ClinicalSeverity.CONTRAINDICATED,
             source_severity="major",
             description="Warfarin is teratogenic.",
         )

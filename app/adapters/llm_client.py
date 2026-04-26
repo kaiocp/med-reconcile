@@ -65,8 +65,7 @@ _ALLERGY_ADVISORY_UNAVAILABLE: str = (
 
 def _format_active_medications(active_medications: list[MedicationItem]) -> str:
     lines = [
-        f"- {med.drug_name} (RxNorm: {med.rxnorm_code}), {med.dosage}"
-        for med in active_medications
+        f"- {med.drug_name} (RxNorm: {med.rxnorm_code}), {med.dosage}" for med in active_medications
     ]
     return "\n".join(lines) if lines else "None on record."
 
@@ -75,8 +74,7 @@ def _format_interactions(interactions: list[ProcessedInteraction]) -> str:
     if not interactions:
         return "None detected."
     lines = [
-        f"- {ix.medication_a} + {ix.medication_b} "
-        f"({ix.severity} severity): {ix.description}"
+        f"- {ix.medication_a} + {ix.medication_b} " f"({ix.severity} severity): {ix.description}"
         for ix in interactions
     ]
     return "\n".join(lines)
@@ -131,9 +129,7 @@ def _render_interactions_template(
     if allergy_conflicts:
         lines.append("\n**Allergy concern(s) also detected:**")
         for conflict in allergy_conflicts:
-            label = (
-                "cross-reactivity" if conflict.conflict_type == "cross_reactivity" else "direct"
-            )
+            label = "cross-reactivity" if conflict.conflict_type == "cross_reactivity" else "direct"
             lines.append(
                 f"- **{conflict.drug_name}** conflicts with a documented "
                 f"**{conflict.allergen}** allergy ({label})."

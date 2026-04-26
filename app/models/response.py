@@ -10,6 +10,8 @@ from typing import Literal
 
 from pydantic import BaseModel
 
+from app.models.severity import ClinicalSeverity
+
 
 class AllergyConflict(BaseModel):
     """A single allergy conflict detected between a new prescription and patient records."""
@@ -24,6 +26,14 @@ class ProcessedInteraction(BaseModel):
 
     medication_a: str
     medication_b: str
-    severity: str  # ClinicalSeverity value — kept as str to avoid models → services import
+    severity: ClinicalSeverity
     source_severity: str
     description: str
+
+
+class ValidationFlag(BaseModel):
+    """A flag raised by the deterministic LLM output validation layer."""
+
+    type: str  # "unrecognized_medication" | "severity_mismatch" | "missing_disclaimer"
+    detail: str  # Clinician-appropriate explanation
+    flag_severity: str  # "warning" | "critical"
