@@ -155,7 +155,7 @@ def reconcile(request: ReconciliationRequest) -> ReconciliationResponse:
         audit = AuditInfo(
             model=llm_output.model_identifier,
             prompt_hash=SYSTEM_PROMPT_HASH,
-            temperature=int(llm_client.TEMPERATURE),
+            temperature=llm_client.TEMPERATURE,
             validation_status=validation_status,
             generated_at=datetime.now(UTC).isoformat(),
         )

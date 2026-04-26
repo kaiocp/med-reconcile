@@ -54,7 +54,7 @@ class AuditInfo(BaseModel):
 
     model: str
     prompt_hash: str
-    temperature: int
+    temperature: float
     validation_status: Literal["passed", "flagged"]
     generated_at: str  # ISO-8601
 
