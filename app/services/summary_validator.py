@@ -5,6 +5,8 @@ or alias tables; no probabilistic methods are used, because a validator that
 could itself hallucinate would create worse outcomes than no check at all.
 """
 
+from typing import Literal
+
 from app.models.llm_output import LLMOutputSchema
 from app.models.response import ProcessedInteraction, ValidationFlag
 
@@ -116,7 +118,7 @@ def validate_llm_output(
     known_medication_names: list[str],
     known_rxnorm_codes: list[str],
     interactions: list[ProcessedInteraction],
-) -> tuple[list[ValidationFlag], str]:
+) -> tuple[list[ValidationFlag], Literal["passed", "flagged"]]:
     """Validate LLM output against patient medication records and safety rules.
 
     Returns (flags, validation_status). Status is 'passed' if flags is empty,
@@ -129,5 +131,5 @@ def validate_llm_output(
     flags.extend(_check_severity_mismatch(interactions, llm_output.clinical_summary))
     flags.extend(_check_missing_disclaimer(llm_output.clinical_summary))
 
-    status = "flagged" if flags else "passed"
+    status: Literal["passed", "flagged"] = "flagged" if flags else "passed"
     return flags, status
