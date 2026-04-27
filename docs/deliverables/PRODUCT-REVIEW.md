@@ -52,4 +52,6 @@ This matters beyond patient safety. The way AI-generated content enters a clinic
 
 3. **EHR integration pattern.** Should the reconciliation call be synchronous (the physician waits) or asynchronous (the prescription proceeds, results appear when ready)? I'd recommend treating the service as a non-blocking integration — it should never prevent a physician from completing a prescription if the service is slow or unavailable.
 
-4. **Regulatory review.** Several of my recommendations reference FDA guidance and audit trail requirements. I'd recommend having a healthcare compliance professional review the service's regulatory posture before the feature reaches production — particularly the physician review workflow and the retention policy.
+4. **Regulatory review.** Several of my recommendations reference FDA guidance and audit trail requirements. I'd recommend as a prerequisite before production deployment having a healthcare compliance professional review the service's regulatory posture — particularly the physician review workflow and the retention policy.
+
+5. **Data handling agreement.** If the engagement involves access to production data or test environments containing patient records, we should confirm the appropriate data handling agreements are in place before development begins. I'll flag this internally on our side as well.
