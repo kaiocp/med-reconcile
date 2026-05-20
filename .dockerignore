@@ -1,0 +1,40 @@
+# VCS
+.git
+.github
+.gitignore
+
+# Python build artifacts and caches
+__pycache__
+*.py[cod]
+*.egg-info
+.pytest_cache
+.mypy_cache
+.ruff_cache
+.coverage
+htmlcov
+.tox
+
+# Virtual environments
+.venv
+venv
+env
+
+# Tests and docs materials — not part of the runtime image
+tests
+deliverables
+research
+reviewers
+
+# Editor / OS
+.vscode
+.idea
+.DS_Store
+*.swp
+
+# Container / CI files
+Dockerfile
+.dockerignore
+docker-compose.yml
+
+# Documentation
+*.md

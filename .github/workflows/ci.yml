@@ -1,0 +1,57 @@
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+jobs:
+  quality:
+    name: Lint, typecheck, test, audit, build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install Poetry
+        uses: snok/install-poetry@v1
+        with:
+          version: 1.8.5
+          virtualenvs-create: true
+          virtualenvs-in-project: true
+
+      - name: Cache virtual environment
+        uses: actions/cache@v4
+        with:
+          path: .venv
+          key: venv-${{ runner.os }}-py3.11-${{ hashFiles('**/poetry.lock') }}
+
+      - name: Install dependencies
+        run: poetry install --no-interaction
+
+      - name: Lint (ruff check)
+        run: poetry run ruff check .
+
+      - name: Format check (ruff format --check)
+        run: poetry run ruff format --check .
+
+      - name: Type check (mypy)
+        run: poetry run mypy app tests
+
+      - name: Test (pytest)
+        run: poetry run pytest
+
+      - name: Dependency audit (pip-audit)
+        # CVE-2026-3219 affects pip itself and has no published fix as of the
+        # date this CI was last reviewed. pip is venv-base tooling, not a
+        # declared application dependency. Reassess on each pip-audit run.
+        run: poetry run pip-audit --ignore-vuln CVE-2026-3219
+
+      - name: Docker build
+        run: docker build -t med-reconcile:ci .
